@@ -19,4 +19,18 @@ example: users
  PATCH /api/users/<int:id>
 
 
+<!-- AUTHENTICATION AND AUTHORIZATION -->
+JWT Authentication
+
+SETUP AUTH => install, secret key, initialize it with our app
+
+<!-- Login -->
+create access token and refresh token
+
+protecting the Api endpoints
+
+handle some jwt authentication errors
+
+logout 
+
 
