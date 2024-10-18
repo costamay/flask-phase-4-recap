@@ -1,8 +1,8 @@
 from flask import Flask, make_response, request
 from flask_migrate import Migrate
 from flask_restful import Resource, Api
-from flask_jwt_extended import JWTManager, create_access_token, create_refresh_token, jwt_required, get_jwt
-# from flaks_cors import CORS
+from flask_jwt_extended import JWTManager, create_access_token, create_refresh_token, jwt_required, get_jwt, current_user, get_jwt_identity
+from flask_cors import CORS
 from models import *
 import os
 from dotenv import load_dotenv
@@ -16,8 +16,15 @@ app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY')
 migrate = Migrate(app, db)
 db.init_app(app)
 jwt = JWTManager(app)
-# CORS(app)
+CORS(app)
 api = Api(app)
+
+# user lookup
+
+@jwt.user_lookup_loader
+def user_lookup_callback(_jwt_header, jwt_data):
+    identity = jwt_data["sub"]
+    return User.query.filter_by(username=identity).one_or_none()
 
 # jwt error handling
 
@@ -40,6 +47,7 @@ def token_in_blocklist(jwt_header, jwt_data):
     token = db.session.query(TokenBlocklist).filter(TokenBlocklist.jti == jti).scalar()
     
     return token is not None
+
 
 
 # @app.route('/users', methods=['POST', 'GET'])
@@ -145,6 +153,24 @@ class LogoutUser(Resource):
         return make_response({'message': f'{token_type} token revoked successfully'})
 
 api.add_resource(LogoutUser, '/logout')
+
+class RefreshToken(Resource):
+    @jwt_required(refresh=True)
+    def get(self):
+        identity = get_jwt_identity()
+        new_access_token = create_access_token(identity=identity)
+        return make_response({'access_token' : new_access_token})
+
+api.add_resource(RefreshToken, '/refresh')
+
+class Whoami(Resource):
+    @jwt_required()
+    def get(self):
+        access_token_body = get_jwt()
+        
+        return make_response({'access_token_body' : access_token_body})
+
+api.add_resource(Whoami, '/whoami')
     
 # RestfulAPI
 class UserResouce(Resource):
